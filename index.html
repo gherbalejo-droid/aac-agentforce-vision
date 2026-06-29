@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aeropuertos Argentina Cargas — Casos de Uso Agentforce</title>
+<style>
+  :root {
+    --sf-blue: #0070D2;
+    --sf-dark: #16325C;
+    --sf-light: #E8F4FD;
+    --sf-green: #2E844A;
+    --sf-gray: #5C6970;
+    --sf-bg: #F3F7FA;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--sf-bg); color: #1A1A1A; }
+
+  header {
+    background: linear-gradient(135deg, var(--sf-dark) 0%, var(--sf-blue) 100%);
+    color: white; padding: 28px 40px; display: flex; align-items: center; justify-content: space-between;
+  }
+  header .brand { display: flex; align-items: center; gap: 16px; }
+  header .sf-logo { background: white; border-radius: 8px; padding: 6px 12px; font-weight: 900; font-size: 18px; color: var(--sf-blue); }
+  header .divider { width: 1px; height: 36px; background: rgba(255,255,255,0.3); }
+  header .client-name { font-size: 20px; font-weight: 700; }
+  header .client-sub { font-size: 13px; opacity: 0.75; margin-top: 3px; }
+  header .badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 600; }
+
+  main { padding: 36px 40px; max-width: 1280px; margin: 0 auto; }
+  .section-title { font-size: 22px; font-weight: 700; color: var(--sf-dark); margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+  .section-title::after { content: ''; flex: 1; height: 2px; background: linear-gradient(90deg, var(--sf-blue), transparent); }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+
+  .card {
+    background: white; border-radius: 10px; padding: 22px;
+    border: 1px solid #D8E4EE; cursor: pointer;
+    transition: all 0.2s ease; position: relative;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,112,210,0.15); border-color: var(--sf-blue); }
+  .card .uc-num { position: absolute; top: 14px; right: 14px; background: var(--sf-light); color: var(--sf-blue); font-size: 11px; font-weight: 700; border-radius: 12px; padding: 3px 10px; }
+  .card .icon { width: 40px; height: 40px; border-radius: 10px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .card h3 { font-size: 14px; font-weight: 700; color: var(--sf-dark); margin-bottom: 5px; line-height: 1.3; }
+  .card .tagline { font-size: 11px; color: var(--sf-gray); margin-bottom: 12px; }
+  .card .pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .pill { font-size: 10px; font-weight: 600; border-radius: 10px; padding: 2px 8px; border: 1px solid; }
+  .pill.channel { background: #E8F4FD; color: var(--sf-blue); border-color: #B0D1EF; }
+  .pill.tech { background: #F3F0FF; color: #5A31B5; border-color: #C9B8FF; }
+  .card .vol-bar { margin-top: 12px; padding-top: 12px; border-top: 1px solid #EEF2F7; display: flex; justify-content: space-between; }
+  .vol-item { text-align: center; }
+  .vol-item .num { font-size: 14px; font-weight: 800; color: var(--sf-dark); }
+  .vol-item .lbl { font-size: 10px; color: var(--sf-gray); }
+  .card .cta { margin-top: 14px; width: 100%; padding: 8px; background: var(--sf-blue); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .card .cta:hover { background: var(--sf-dark); }
+
+  .totals { margin-top: 28px; background: var(--sf-dark); color: white; border-radius: 10px; padding: 20px 32px; display: flex; justify-content: space-around; align-items: center; }
+  .totals .t-item { text-align: center; }
+  .totals .t-num { font-size: 28px; font-weight: 900; }
+  .totals .t-lbl { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+  .totals .t-div { width: 1px; height: 50px; background: rgba(255,255,255,0.2); }
+
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .overlay.open { display: flex; }
+  .modal { background: white; border-radius: 14px; width: 100%; max-width: 820px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .modal-header { padding: 24px 28px 20px; background: linear-gradient(135deg, var(--sf-dark), var(--sf-blue)); color: white; border-radius: 14px 14px 0 0; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: flex-start; }
+  .modal-header h2 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .modal-header .sub { font-size: 13px; opacity: 0.8; }
+  .modal-close { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 18px; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .modal-body { padding: 24px 28px; }
+  .m-section { margin-bottom: 24px; }
+  .m-section h4 { font-size: 12px; font-weight: 700; color: var(--sf-gray); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+  .description-box { background: var(--sf-light); border-left: 4px solid var(--sf-blue); border-radius: 0 8px 8px 0; padding: 14px 16px; font-size: 14px; line-height: 1.6; color: var(--sf-dark); }
+  .kpi-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .kpi-card { flex: 1; min-width: 180px; background: #F8FBFF; border: 1px solid #D8E4EE; border-radius: 8px; padding: 12px 14px; }
+  .kpi-card .kpi-label { font-size: 11px; color: var(--sf-gray); font-weight: 600; margin-bottom: 4px; }
+  .kpi-card .kpi-val { font-size: 14px; font-weight: 700; color: var(--sf-green); }
+  .chat-sim { background: #ECF2F8; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .bubble { display: flex; gap: 8px; align-items: flex-end; }
+  .bubble.agent { flex-direction: row-reverse; }
+  .bubble .avatar { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .bubble.user .avatar { background: #D0E8F9; }
+  .bubble.agent .avatar { background: var(--sf-blue); color: white; font-size: 12px; font-weight: 700; }
+  .bubble .msg { max-width: 75%; padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5; }
+  .bubble.user .msg { background: white; border: 1px solid #D8E4EE; border-bottom-left-radius: 4px; }
+  .bubble.agent .msg { background: var(--sf-blue); color: white; border-bottom-right-radius: 4px; }
+  .bubble.system .msg { background: #FFF3CD; border: 1px solid #FFD97D; color: #7A5C00; font-size: 12px; font-style: italic; margin: 0 auto; border-radius: 8px; }
+  .vol-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .vol-box { border-radius: 10px; padding: 16px; text-align: center; border: 1px solid; }
+  .vol-box.fc { background: #F3F0FF; border-color: #C9B8FF; }
+  .vol-box.d360 { background: #EDF9FF; border-color: #9FD8F0; }
+  .vol-box.wa { background: #EDFBF0; border-color: #9FE0B3; }
+  .vol-box .v-num { font-size: 28px; font-weight: 900; }
+  .vol-box.fc .v-num { color: #5A31B5; }
+  .vol-box.d360 .v-num { color: var(--sf-blue); }
+  .vol-box.wa .v-num { color: var(--sf-green); }
+  .vol-box .v-lbl { font-size: 12px; font-weight: 600; color: var(--sf-gray); margin-top: 4px; }
+  .vol-box .v-sub { font-size: 11px; color: #AAB7C4; margin-top: 2px; }
+  .pct-bar-wrap { margin-top: 14px; }
+  .pct-label { font-size: 13px; color: var(--sf-gray); margin-bottom: 6px; }
+  .pct-bar-bg { background: #EEF2F7; border-radius: 6px; height: 10px; overflow: hidden; }
+  .pct-bar-fill { height: 100%; background: linear-gradient(90deg, var(--sf-blue), #00C4FF); border-radius: 6px; }
+  .tech-stack { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tech-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; background: linear-gradient(135deg, #F3F0FF, #E8F4FD); border: 1px solid #C9B8FF; color: #3A1E7A; }
+  .priority { display: inline-flex; align-items: center; gap: 6px; background: #FFF3E0; border: 1px solid #FFB347; color: #C85A00; padding: 5px 12px; border-radius: 16px; font-size: 12px; font-weight: 700; margin-top: 10px; }
+
+  footer { text-align: center; padding: 20px; color: var(--sf-gray); font-size: 12px; border-top: 1px solid #D8E4EE; margin-top: 20px; }
+
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 780px) { .grid { grid-template-columns: repeat(2, 1fr); } header { flex-direction: column; gap: 12px; } main { padding: 20px; } }
+  @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="sf-logo">salesforce</div>
+    <div class="divider"></div>
+    <div>
+      <div class="client-name">Aeropuertos Argentina Cargas</div>
+      <div class="client-sub">Transformación Digital con Agentforce</div>
+    </div>
+  </div>
+  <div class="badge">7 Casos de Uso · 2026</div>
+</header>
+
+<main>
+  <div class="section-title">Casos de Uso — Línea de Negocio Cargas</div>
+
+  <div class="grid">
+
+    <!-- UC1 -->
+    <div class="card" onclick="openModal('uc1')">
+      <span class="uc-num">UC 1</span>
+      <div class="icon" style="background:#E8F4FD;">🔍</div>
+      <h3>Consulta sobre tu Guía Pull</h3>
+      <div class="tagline">Visibilidad + Autoservicio</div>
+      <div class="pills">
+        <span class="pill channel">WhatsApp</span><span class="pill channel">MIAW</span>
+        <span class="pill tech">Agentforce</span>
+      </div>
+      <div class="vol-bar">
+        <div class="vol-item"><div class="num">119</div><div class="lbl">Flex Credits</div></div>
+        <div class="vol-item"><div class="num">34</div><div class="lbl">Data 360</div></div>
+        <div class="vol-item"><div class="num">15.4K</div><div class="lbl">WhatsApp</div></div>
+        <div class="vol-item"><div class="num" style="color:var(--sf-blue)">48.6%</div><div class="lbl">del total</div></div>
+      </div>
+      <button class="cta">Ver simulación →</button>
+    </div>
+
+    <!-- UC2 -->
+    <div class="card" onclick="openModal('uc2')">
+      <span class="uc-num">UC 2</span>
+      <div class="icon" style="background:#FFF0E8;">🔔</div>
+      <h3>Notificaciones Proactivas y Gestión de Vencimientos</h3>
+      <div class="tagline">Push · D+0 a D+90</div>
+      <div class="pills">
+        <span class="pill channel">WhatsApp</span><span class="pill channel">Mail</span>
+        <span class="pill tech">Data Cloud</span>
+      </div>
+      <div class="vol-bar">
+        <div class="vol-item"><div class="num">4</div><div class="lbl">Flex Credits</div></div>
+        <div class="vol-item"><div class="num">1</div><div class="lbl">Data 360</div></div>
+        <div class="vol-item"><div class="num">518</div><div class="lbl">WhatsApp</div></div>
+        <div class="vol-item"><div class="num" style="color:var(--sf-blue)">1.6%</div><div class="lbl">del total</div></div>
+      </div>
+      <button class="cta">Ver simulación →</button>
+    </div>
+
+    <!-- UC3 -->
+    <div class="card" onclick="openModal('uc3')">
+      <span class="uc-num">UC 3</span>
+      <div class="icon" style="background:#EDFBF0;">💰</div>
+      <h3>Upsell y Cross-sell</h3>
+      <div class="tagline">Motor de Revenue</div>
+      <div class="pills">
+        <span class="pill channel">WhatsApp</span><span class="pill channel">Web</span>
+        <span class="pill tech">MuleSoft</span>
+      </div>
+      <div class="vol-bar">
+        <div class="vol-item"><div class="num">5</div><div class="lbl">Flex Credits</div></div>
+        <div class="vol-item"><div class="num">1</div><div class="lbl">Data 360</div></div>
+        <div class="vol-item"><div class="num">647</div><div class="lbl">WhatsApp</div></div>
+        <div class="vol-item"><div class="num" style="color:var(--sf-blue)">2.0%</div><div class="lbl">del total</div></div>
+      </div>
+      <button class="cta">Ver simulación →</button>
+    </div>
+
+    <!-- UC4 - MEMBRESÍA B2B -->
+    <div class="card" onclick="openModal('uc4')">
+      <span class="uc-num">UC 4</span>
+      <div class="icon" style="background:#FFF0F8;">🤝</div>
+      <h3>Membresía B2B</h3>
+      <div class="tagline">Clientes Corporativos · Importadores/Agentes</div>
+      <div class="pills">
+        <span class="pill channel">WhatsApp</span><span class="pill channel">Web</span>
+        <span class="pill tech">D360</span>
+      </div>
+      <div class="vol-bar">
+        <div class="vol-item"><div class="num">5</div><div class="lbl">Flex Credits</div></div>
+        <div class="vol-item"><div class="num">1</div><div class="lbl">Data 360</div></div>
+        <div class="vol-item"><div class="num">647</div><div class="lbl">WhatsApp</div></div>
+        <div class="vol-item"><div class="num" style="color:var(--sf-blue)">2.0%</div><div class="lbl">del total</div></div>
+      </div>
+      <button class="cta">Ver simulación →</button>
+    </div>
+
+    <!-- UC5 -->
+    <div class="card" onclick="openModal('uc5')">
+      <span class="uc-num">UC 5</span>
+      <div class="icon" style="background:#F3F0FF;">🗃️</div>
+      <h3>Gestión de Almacenaje e Identificación de Contacto</h3>
+      <div class="tagline">Guías Huérfanas · Trazabilidad</div>
+      <div class="pills">
+        <span class="pill channel">WhatsApp</span><span class="pill channel">MIAW</span>
+        <span class="pill tech">Agentforce</span>
+      </div>
+      <div class="vol-bar">
+        <div class="vol-item"><div class="num">102</div><div class="lbl">Flex Credits</div></div>
+        <div class="vol-item"><div class="num">29</div><div class="lbl">Data 360</div></div>
+        <div class="vol-item"><div class="num">13.2K</div><div class="lbl">WhatsApp</div></div>
+        <div class="vol-item"><div class="num" style="color:var(--sf-blue)">41.6%</div><div class="lbl">del total</div></div>
+      </div>
+      <button class="cta">Ver simulación →</button>
+    </div>
+
+    <!-- UC6 -->
+    <div class="card" onclick="openModal('uc6')">
+      <span class="uc-num">UC 6</span>
+      <div class="icon" style="background:#FFF0F0;">📍</div>
+      <h3>Cargas sin Posición</h3>
+      <div class="tagline">Incidente Operativo · Rampa</div>
+      <div class="pills">
+        <span class="pill channel">WhatsApp</span><span class="pill channel">Mail</span>
+        <span class="pill tech">Agentforce</span>
+      </div>
+      <div class="vol-bar">
+        <div class="vol-item"><div class="num">5</div><div class="lbl">Flex Credits</div></div>
+        <div class="vol-item"><div class="num">1</div><div class="lbl">Data 360</div></div>
+        <div class="vol-item"><div class="num">647</div><div class="lbl">WhatsApp</div></div>
+        <div class="vol-item"><div class="num" style="color:var(--sf-blue)">2.0%</div><div class="lbl">del total</div></div>
+      </div>
+      <button class="cta">Ver simulación →</button>
+    </div>
+
+    <!-- UC7 -->
+    <div class="card" onclick="openModal('uc7')">
+      <span class="uc-num">UC 7</span>
+      <div class="icon" style="background:#FFF8E1;">🗂️</div>
+      <h3>Solicitudes Operativas</h3>
+      <div class="tagline">IMPO · Abandono · D+60</div>
+      <div class="pills">
+        <span class="pill channel">WhatsApp</span><span class="pill channel">Web</span>
+        <span class="pill tech">Agentforce</span>
+      </div>
+      <div class="vol-bar">
+        <div class="vol-item"><div class="num">6</div><div class="lbl">Flex Credits</div></div>
+        <div class="vol-item"><div class="num">2</div><div class="lbl">Data 360</div></div>
+        <div class="vol-item"><div class="num">776</div><div class="lbl">WhatsApp</div></div>
+        <div class="vol-item"><div class="num" style="color:var(--sf-blue)">2.4%</div><div class="lbl">del total</div></div>
+      </div>
+      <button class="cta">Ver simulación →</button>
+    </div>
+
+  </div>
+
+  <div class="totals">
+    <div class="t-item"><div class="t-num">245</div><div class="t-lbl">Flex Credits / mes</div></div>
+    <div class="t-div"></div>
+    <div class="t-item"><div class="t-num">69</div><div class="t-lbl">Data 360 / mes</div></div>
+    <div class="t-div"></div>
+    <div class="t-item"><div class="t-num">31.707</div><div class="t-lbl">Conversaciones WhatsApp / mes</div></div>
+    <div class="t-div"></div>
+    <div class="t-item"><div class="t-num">7 UCs</div><div class="t-lbl">Casos de uso activos</div></div>
+  </div>
+</main>
+
+<!-- ===== MODALS ===== -->
+
+<!-- UC1 -->
+<div class="overlay" id="modal-uc1">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div style="font-size:12px;opacity:0.7;margin-bottom:4px;">UC 1 · Visibilidad + Autoservicio</div><h2>Consulta sobre tu Guía Pull</h2><div class="sub">Importadores · Despachantes · Agentes de Cargas</div></div>
+      <button class="modal-close" onclick="closeModal('uc1')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-section">
+        <h4>Descripción</h4>
+        <div class="description-box">Un agente que atiende consultas 24/7, autentica al cliente por <strong>CUIT/AWB</strong> y consulta en SAP el estado de la carga, fecha de disponibilidad y costos acumulados. Requiere integración vía MuleSoft para exponer datos de SAP en tiempo real.</div>
+      </div>
+      <div class="m-section">
+        <h4>Simulación de experiencia</h4>
+        <div class="chat-sim">
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Hola, necesito saber el estado de mi guía AWB 020-12345678</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">¡Hola! Soy el asistente de AAC Cargas. Para consultar tu guía necesito verificar tu identidad. ¿Me indicás tu CUIT?</div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">20-12345678-9</div></div>
+          <div class="bubble system"><div class="msg">⚙️ Agentforce consulta SAP vía MuleSoft en tiempo real…</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">✅ Guía <strong>AWB 020-12345678</strong> verificada.<br><br>📦 Estado: <strong>Disponible para retiro</strong><br>📅 Desde: 28/06/2026<br>💰 Costo acumulado: $48.200<br><br>¿Querés el link de pago?</div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Sí, mandame el link por favor.</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">🔗 Link de pago: <u>aac.com.ar/pago/xyz123</u> · Válido 48hs. ¡Hasta luego!</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>KPIs objetivo</h4>
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-label">Tiempo de respuesta</div><div class="kpi-val">30-60 min → &lt; 2 min</div></div>
+          <div class="kpi-card"><div class="kpi-label">Resolución sin humano</div><div class="kpi-val">80% automatizado</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>Volúmenes mensuales</h4>
+        <div class="vol-grid">
+          <div class="vol-box fc"><div class="v-num">119</div><div class="v-lbl">Flex Credits</div><div class="v-sub">Conversaciones Agentforce</div></div>
+          <div class="vol-box d360"><div class="v-num">34</div><div class="v-lbl">Data 360</div><div class="v-sub">Perfiles unificados</div></div>
+          <div class="vol-box wa"><div class="v-num">15.401</div><div class="v-lbl">WhatsApp</div><div class="v-sub">Conversaciones / mes</div></div>
+        </div>
+        <div class="pct-bar-wrap"><div class="pct-label">Participación: <strong>48.6%</strong> — mayor volumen del portafolio</div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:48.6%"></div></div></div>
+      </div>
+      <div class="m-section">
+        <h4>Stack tecnológico</h4>
+        <div class="tech-stack"><span class="tech-badge">Agentforce Service Agent</span><span class="tech-badge">MuleSoft (SAP)</span><span class="tech-badge">WhatsApp / MIAW</span><span class="tech-badge">Flex Credits</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UC2 -->
+<div class="overlay" id="modal-uc2">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div style="font-size:12px;opacity:0.7;margin-bottom:4px;">UC 2 · Push Proactivo</div><h2>Notificaciones Proactivas y Gestión de Vencimientos</h2><div class="sub">Importadores · Despachantes · D+0 hasta D+90</div></div>
+      <button class="modal-close" onclick="closeModal('uc2')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-section">
+        <h4>Descripción</h4>
+        <div class="description-box">Motor de reglas que monitorea SAP y dispara alertas automáticas en hitos clave: <strong>D+0</strong> disponibilidad, <strong>D+3</strong> recordatorio, <strong>D+7</strong> vencimiento, hasta D+90. El historial en Marketing Cloud sirve como base de trazabilidad legal.</div>
+      </div>
+      <div class="m-section">
+        <h4>Simulación de experiencia</h4>
+        <div class="chat-sim">
+          <div class="bubble system"><div class="msg">⚙️ SAP detecta guía disponible → D+0 → Trigger automático</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">📦 <strong>AAC Cargas</strong>: Tu guía AWB 020-98765 está disponible desde hoy. Tenés 7 días antes del vencimiento. ¿Agendamos el retiro?</div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Todavía no puedo, la semana que viene.</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">Ok, te recordamos en D+3. A partir del D+7 se generan cargos adicionales de almacenaje.</div></div>
+          <div class="bubble system"><div class="msg">⚙️ D+3 → Segundo recordatorio enviado automáticamente</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">⚠️ Tu guía AWB 020-98765 vence en <strong>4 días</strong>. Costo actual: $32.100. Hacé clic para ver opciones de pago.</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>KPIs objetivo</h4>
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-label">Notificación D+0</div><div class="kpi-val">100% de las guías</div></div>
+          <div class="kpi-card"><div class="kpi-label">Reducción mora</div><div class="kpi-val">↓ % guías en FILA</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>Volúmenes mensuales</h4>
+        <div class="vol-grid">
+          <div class="vol-box fc"><div class="v-num">4</div><div class="v-lbl">Flex Credits</div><div class="v-sub">Conversaciones Agentforce</div></div>
+          <div class="vol-box d360"><div class="v-num">1</div><div class="v-lbl">Data 360</div><div class="v-sub">Perfiles unificados</div></div>
+          <div class="vol-box wa"><div class="v-num">518</div><div class="v-lbl">WhatsApp</div><div class="v-sub">Notificaciones / mes</div></div>
+        </div>
+        <div class="pct-bar-wrap"><div class="pct-label">Participación: <strong>1.6%</strong></div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:1.6%"></div></div></div>
+      </div>
+      <div class="m-section">
+        <h4>Stack tecnológico</h4>
+        <div class="tech-stack"><span class="tech-badge">Data Cloud</span><span class="tech-badge">Marketing Cloud Engagement</span><span class="tech-badge">Service Cloud</span><span class="tech-badge">WhatsApp / Mail</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UC3 -->
+<div class="overlay" id="modal-uc3">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div style="font-size:12px;opacity:0.7;margin-bottom:4px;">UC 3 · Motor de Revenue</div><h2>Upsell y Cross-sell</h2><div class="sub">Clientes B2B · Importadores · Agentes</div></div>
+      <button class="modal-close" onclick="closeModal('uc3')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-section">
+        <h4>Descripción</h4>
+        <div class="description-box">El agente recomienda proactivamente servicios adicionales (<strong>Cool Dollies, Fastpass, Healthcare</strong>) basados en el tipo de carga detectado en SAP y ofrece links de pago directos. Requiere integración con Mercado Pago para cierre de venta en el chat.</div>
+      </div>
+      <div class="m-section">
+        <h4>Simulación de experiencia</h4>
+        <div class="chat-sim">
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Consulto por mi guía AWB 020-55544 de importación farmacéutica.</div></div>
+          <div class="bubble system"><div class="msg">⚙️ Detección: tipo de carga = HEALTHCARE · cadena de frío requerida</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">¡Hola! Tu guía está disponible 🎉<br><br>💡 Tu carga requiere cadena de frío. Te recomendamos <strong>Cool Dollies</strong> para el traslado. ¿Te interesa?</div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">¿Cuánto sale?</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg"><strong>Cool Dollies</strong>: $8.500 · <strong>Fastpass</strong> (prioridad de acceso): $3.200<br><br>🔗 Link de pago combinado: <u>aac.com.ar/servicios/xyz</u></div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Perfecto, pago los dos.</div></div>
+          <div class="bubble system"><div class="msg">✅ Pago procesado vía Mercado Pago · Confirmación enviada por mail</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>KPIs objetivo</h4>
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-label">Conversión digital</div><div class="kpi-val">↑ servicios adicionales</div></div>
+          <div class="kpi-card"><div class="kpi-label">Sin ir al portal</div><div class="kpi-val">80% de solicitudes</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>Volúmenes mensuales</h4>
+        <div class="vol-grid">
+          <div class="vol-box fc"><div class="v-num">5</div><div class="v-lbl">Flex Credits</div><div class="v-sub">Conversaciones Agentforce</div></div>
+          <div class="vol-box d360"><div class="v-num">1</div><div class="v-lbl">Data 360</div><div class="v-sub">Perfiles unificados</div></div>
+          <div class="vol-box wa"><div class="v-num">647</div><div class="v-lbl">WhatsApp</div><div class="v-sub">Conversaciones / mes</div></div>
+        </div>
+        <div class="pct-bar-wrap"><div class="pct-label">Participación: <strong>2.0%</strong></div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:2%"></div></div></div>
+      </div>
+      <div class="m-section">
+        <h4>Stack tecnológico</h4>
+        <div class="tech-stack"><span class="tech-badge">Agentforce Service Agent</span><span class="tech-badge">MuleSoft</span><span class="tech-badge">Mercado Pago</span><span class="tech-badge">WhatsApp / Web MIAW</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UC4 - MEMBRESÍA B2B -->
+<div class="overlay" id="modal-uc4">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div style="font-size:12px;opacity:0.7;margin-bottom:4px;">UC 4 · Clientes Corporativos</div><h2>Membresía B2B</h2><div class="sub">Importadores · Agentes · Clientes B2B</div></div>
+      <button class="modal-close" onclick="closeModal('uc4')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-section">
+        <h4>Descripción</h4>
+        <div class="description-box">El agente gestiona el ciclo de vida de los clientes B2B: <strong>onboarding de nuevos importadores y agentes</strong>, activación de contratos corporativos, actualización de planes y oferta de beneficios según volumen operado. Se apoya en Data 360 para personalizar la propuesta según el perfil del cliente.</div>
+      </div>
+      <div class="m-section">
+        <h4>Simulación de experiencia</h4>
+        <div class="chat-sim">
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Hola, somos una empresa despachante y queremos abrir una cuenta corporativa con AAC Cargas.</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">¡Bienvenidos! Puedo ayudarlos con el alta de membresía B2B. Para comenzar, necesito el CUIT de la empresa y el contacto responsable.</div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">CUIT 30-71234567-8 · Contacto: Martín García</div></div>
+          <div class="bubble system"><div class="msg">⚙️ D360 busca perfil · SAP verifica historial operativo · sin deuda activa</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">✅ Empresa habilitada. Basándome en su volumen operativo, les recomendamos el plan <strong>B2B Pro</strong>:<br><br>• Prioridad en asignación de turnos<br>• Descuento del 10% en almacenaje<br>• Notificaciones en tiempo real<br><br>¿Activamos el plan?</div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Sí, adelante.</div></div>
+          <div class="bubble system"><div class="msg">✅ Membresía B2B Pro activada · Contrato enviado a mail del responsable</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>KPIs objetivo</h4>
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-label">Onboarding digital</div><div class="kpi-val">80% sin gestión manual</div></div>
+          <div class="kpi-card"><div class="kpi-label">Conversión de plan</div><div class="kpi-val">↑ upgrade corporativo</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>Volúmenes mensuales</h4>
+        <div class="vol-grid">
+          <div class="vol-box fc"><div class="v-num">5</div><div class="v-lbl">Flex Credits</div><div class="v-sub">Conversaciones Agentforce</div></div>
+          <div class="vol-box d360"><div class="v-num">1</div><div class="v-lbl">Data 360</div><div class="v-sub">Perfiles unificados</div></div>
+          <div class="vol-box wa"><div class="v-num">647</div><div class="v-lbl">WhatsApp</div><div class="v-sub">Conversaciones / mes</div></div>
+        </div>
+        <div class="pct-bar-wrap"><div class="pct-label">Participación: <strong>2.0%</strong></div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:2%"></div></div></div>
+      </div>
+      <div class="m-section">
+        <h4>Stack tecnológico</h4>
+        <div class="tech-stack"><span class="tech-badge">Agentforce Service Agent</span><span class="tech-badge">Data Cloud 360</span><span class="tech-badge">Marketing Cloud</span><span class="tech-badge">WhatsApp / Web MIAW</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UC5 -->
+<div class="overlay" id="modal-uc5">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div style="font-size:12px;opacity:0.7;margin-bottom:4px;">UC 5 · Guías Huérfanas · Trazabilidad</div><h2>Gestión de Almacenaje e Identificación de Contacto</h2><div class="sub">Operaciones · Consignatarios · Despachantes</div></div>
+      <button class="modal-close" onclick="closeModal('uc5')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-section">
+        <h4>Descripción</h4>
+        <div class="description-box">AAC no siempre tiene identificado el contacto del consignatario o despachante al momento en que la guía está disponible. Sin contacto, no hay notificación — y sin notificación, la carga permanece en depósito acumulando tarifas de almacenaje sin que nadie lo sepa.<br><br>El proceso de identificación de contacto es manual, depende de consultas a ARCA o Aduana y no tiene trazabilidad. <strong>Las guías huérfanas se gestionan ad hoc</strong> — sin registro, sin seguimiento y sin métricas.</div>
+      </div>
+      <div class="m-section">
+        <h4>Simulación de experiencia</h4>
+        <div class="chat-sim">
+          <div class="bubble system"><div class="msg">⚙️ SAP detecta guía AWB 020-66103 disponible · sin contacto asociado → Trigger Agentforce</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">Guía <strong>AWB 020-66103</strong> disponible sin contacto registrado. Iniciando identificación automática vía ARCA/Aduana…</div></div>
+          <div class="bubble system"><div class="msg">⚙️ Consulta ARCA · Contacto encontrado: Despachante Logística del Sur · mail y teléfono validados</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">✅ Contacto identificado. Notificando al despachante <strong>Logística del Sur</strong>…</div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Hola, recibí una notificación de que tengo una guía disponible. No sabía que había llegado.</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">Así es. Tu guía <strong>AWB 020-66103</strong> está disponible desde el 25/06. Te enviamos los detalles y el link para coordinar el retiro antes de que se generen cargos adicionales.<br><br>📋 Ticket de seguimiento: <strong>#ORF-2026-00218</strong></div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>KPIs objetivo</h4>
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-label">Guías sin contacto</div><div class="kpi-val">↓ Identificación automática</div></div>
+          <div class="kpi-card"><div class="kpi-label">Almacenaje evitable</div><div class="kpi-val">↓ Reducción de tarifas</div></div>
+          <div class="kpi-card"><div class="kpi-label">Trazabilidad</div><div class="kpi-val">100% de casos registrados</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>Volúmenes mensuales</h4>
+        <div class="vol-grid">
+          <div class="vol-box fc"><div class="v-num">102</div><div class="v-lbl">Flex Credits</div><div class="v-sub">Conversaciones Agentforce</div></div>
+          <div class="vol-box d360"><div class="v-num">29</div><div class="v-lbl">Data 360</div><div class="v-sub">Perfiles unificados</div></div>
+          <div class="vol-box wa"><div class="v-num">13.200</div><div class="v-lbl">WhatsApp</div><div class="v-sub">Notificaciones / mes</div></div>
+        </div>
+        <div class="pct-bar-wrap"><div class="pct-label">Participación: <strong>41.6%</strong> — segundo mayor volumen</div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:41.6%"></div></div></div>
+      </div>
+      <div class="m-section">
+        <h4>Stack tecnológico</h4>
+        <div class="tech-stack"><span class="tech-badge">Agentforce Service Agent</span><span class="tech-badge">Service Cloud</span><span class="tech-badge">ARCA / Aduana API</span><span class="tech-badge">SAP / MuleSoft</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UC6 -->
+<div class="overlay" id="modal-uc6">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div style="font-size:12px;opacity:0.7;margin-bottom:4px;">UC 6 · Incidente Operativo</div><h2>Cargas sin Posición</h2><div class="sub">Operarios de Rampa · Importadores · Despachantes</div></div>
+      <button class="modal-close" onclick="closeModal('uc6')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-section">
+        <h4>Descripción</h4>
+        <div class="description-box">El cliente llega a la rampa con su Orden de Carga (OC) para retirar su mercadería y el operario no la encuentra en la posición indicada por WMS. No existe ningún proceso formal para gestionar este incidente — el jefe de rampa busca manualmente, el cliente espera en rampa sin información y si no se encuentra, se resuelve ad hoc.<br><br>Sin registro del incidente, sin notificación al consignatario ni al despachante y sin seguimiento hasta la resolución. <strong>El tiempo de espera en rampa genera incremento de tarifa por almacenaje evitable</strong> y una experiencia negativa que impacta directamente en la retención del cliente B2B.</div>
+      </div>
+      <div class="m-section">
+        <h4>Simulación de experiencia</h4>
+        <div class="chat-sim">
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Estoy en rampa con mi OC para retirar guía AWB 020-88321 y el operario dice que no la encuentra en la posición.</div></div>
+          <div class="bubble system"><div class="msg">⚙️ Agentforce registra el incidente · consulta WMS · notifica a jefe de rampa</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">Registré el incidente. El jefe de rampa ya fue notificado y está verificando posiciones alternativas en el sistema. Te mantenemos informado en tiempo real.<br><br>📋 Ticket: <strong>#INC-2026-04412</strong></div></div>
+          <div class="bubble system"><div class="msg">⚙️ WMS reporta posición alternativa: Sector B · Módulo 14</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">✅ Mercadería localizada en <strong>Sector B, Módulo 14</strong>. El operario ya se dirige al lugar. Tiempo estimado: 8 minutos.<br><br>Se notificó también a tu despachante por mail.</div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Perfecto, gracias por el seguimiento.</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>KPIs objetivo</h4>
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-label">Registro del incidente</div><div class="kpi-val">100% de casos formalizados</div></div>
+          <div class="kpi-card"><div class="kpi-label">Tiempo de espera en rampa</div><div class="kpi-val">↓ Reduce tarifa evitable</div></div>
+          <div class="kpi-card"><div class="kpi-label">Notificación al despachante</div><div class="kpi-val">Automática en tiempo real</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>Volúmenes mensuales</h4>
+        <div class="vol-grid">
+          <div class="vol-box fc"><div class="v-num">5</div><div class="v-lbl">Flex Credits</div><div class="v-sub">Conversaciones Agentforce</div></div>
+          <div class="vol-box d360"><div class="v-num">1</div><div class="v-lbl">Data 360</div><div class="v-sub">Perfiles unificados</div></div>
+          <div class="vol-box wa"><div class="v-num">647</div><div class="v-lbl">WhatsApp</div><div class="v-sub">Conversaciones / mes</div></div>
+        </div>
+        <div class="pct-bar-wrap"><div class="pct-label">Participación: <strong>2.0%</strong></div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:2%"></div></div></div>
+      </div>
+      <div class="m-section">
+        <h4>Stack tecnológico</h4>
+        <div class="tech-stack"><span class="tech-badge">Agentforce Service Agent</span><span class="tech-badge">Service Cloud</span><span class="tech-badge">WMS Integration</span><span class="tech-badge">WhatsApp / Mail</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UC7 -->
+<div class="overlay" id="modal-uc7">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div style="font-size:12px;opacity:0.7;margin-bottom:4px;">UC 7 · IMPO · Abandono · D+60</div><h2>Solicitudes Operativas</h2><div class="sub">Importadores · Despachantes · Gestor Documental</div></div>
+      <button class="modal-close" onclick="closeModal('uc7')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-section">
+        <h4>Descripción</h4>
+        <div class="description-box">Digitaliza los <strong>13 tipos de movimientos IMPO</strong> (Repesaje, Fraccionamiento, etc.), validando condiciones en SAP e iniciando el trámite automáticamente.<br><br>Identifica guías en riesgo de abandono (D+60), recibe y valida documentación legal digitalmente y gestiona el cobro del trámite.</div>
+      </div>
+      <div class="m-section">
+        <h4>Simulación de experiencia</h4>
+        <div class="chat-sim">
+          <div class="bubble system"><div class="msg">⚙️ D+55 · Detección automática: guía AWB 020-31190 elegible para abandono</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">⚠️ Tu guía AWB 020-31190 lleva 55 días sin retiro. En 5 días iniciará el proceso de abandono. ¿Iniciamos el trámite digital ahora?</div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">Sí, ¿qué documentación necesito?</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">Necesito:<br>📄 DNI/CUIT del declarante<br>📄 Poder notarial (si aplica)<br>📄 Factura de la mercadería<br><br>Podés enviarlos acá directamente.</div></div>
+          <div class="bubble user"><div class="avatar">👤</div><div class="msg">[Archivos adjuntos enviados]</div></div>
+          <div class="bubble system"><div class="msg">⚙️ Agentforce valida documentación · Todo correcto</div></div>
+          <div class="bubble agent"><div class="avatar">AI</div><div class="msg">✅ Trámite iniciado. Nro: <strong>#AB-2026-00432</strong><br>💰 Costo: $15.000 — link de pago enviado a tu mail.</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>KPIs objetivo</h4>
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-label">Trámites sin presencia física</div><div class="kpi-val">80% completados</div></div>
+          <div class="kpi-card"><div class="kpi-label">Notificación D+55</div><div class="kpi-val">100% guías elegibles</div></div>
+        </div>
+      </div>
+      <div class="m-section">
+        <h4>Volúmenes mensuales</h4>
+        <div class="vol-grid">
+          <div class="vol-box fc"><div class="v-num">6</div><div class="v-lbl">Flex Credits</div><div class="v-sub">Conversaciones Agentforce</div></div>
+          <div class="vol-box d360"><div class="v-num">2</div><div class="v-lbl">Data 360</div><div class="v-sub">Perfiles unificados</div></div>
+          <div class="vol-box wa"><div class="v-num">776</div><div class="v-lbl">WhatsApp</div><div class="v-sub">Conversaciones / mes</div></div>
+        </div>
+        <div class="pct-bar-wrap"><div class="pct-label">Participación: <strong>2.4%</strong></div><div class="pct-bar-bg"><div class="pct-bar-fill" style="width:2.4%"></div></div></div>
+      </div>
+      <div class="m-section">
+        <h4>Stack tecnológico</h4>
+        <div class="tech-stack"><span class="tech-badge">Agentforce Service Agent</span><span class="tech-badge">Service Cloud</span><span class="tech-badge">WhatsApp / Web</span><span class="tech-badge">Gestión Documental Digital</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Aeropuertos Argentina Cargas · Salesforce Agentforce · Entregable Interno 2026 · Confidencial</footer>
+
+<script>
+  function openModal(id) { document.getElementById('modal-'+id).classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeModal(id) { document.getElementById('modal-'+id).classList.remove('open'); document.body.style.overflow=''; }
+  document.querySelectorAll('.overlay').forEach(el => el.addEventListener('click', function(e){ if(e.target===this){this.classList.remove('open');document.body.style.overflow='';} }));
+</script>
+</body>
+</html>
